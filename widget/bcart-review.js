@@ -1,32 +1,43 @@
 /**
- * B-CART レビューウィジェット
+ * B-CART レビューウィジェット v2.0
  *
  * 使用方法:
- * <script
- *   src="https://your-domain.com/bcart-review.js"
- *   data-supabase-url="https://xxx.supabase.co"
- *   data-supabase-anon-key="your-anon-key"
- *   data-shop-id="your-shop-id">
- * </script>
- * <div id="bcart-review-widget"></div>
+ * <div id="bcart-reviews" data-shop-id="your-bcart-shop-id" data-product-id="PRODUCT_ID"></div>
+ * <script src="https://your-domain.com/widget/bcart-review.js"></script>
  */
 (function() {
   'use strict';
 
   // ============================================
-  // 設定取得
+  // Supabase設定（固定）
   // ============================================
-  const script = document.currentScript;
-  const CONFIG = {
-    supabaseUrl: script.getAttribute('data-supabase-url'),
-    supabaseKey: script.getAttribute('data-supabase-anon-key'),
-    shopId: script.getAttribute('data-shop-id'),
-    containerId: script.getAttribute('data-container-id') || 'bcart-review-widget'
-  };
+  const SUPABASE_URL = 'https://qxnxyjssgsnbsfqjrfrc.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bnh5anNzZ3NuYnNmcWpyZnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTcxNTksImV4cCI6MjA4NTg5MzE1OX0.krm-1spjrDf42V9pM6OxhcjnAhecoFZNLltFmXf-FiY';
 
-  // 設定チェック
-  if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey || !CONFIG.shopId) {
-    console.error('[BcartReview] 必須設定が不足しています: data-supabase-url, data-supabase-anon-key, data-shop-id');
+  // ============================================
+  // ウィジェット検出・設定
+  // ============================================
+  const container = document.getElementById('bcart-reviews');
+  if (!container) {
+    console.error('[BcartReview] コンテナ #bcart-reviews が見つかりません');
+    return;
+  }
+
+  const bcartShopId = container.getAttribute('data-shop-id');
+  let productId = container.getAttribute('data-product-id');
+
+  if (!bcartShopId) {
+    console.error('[BcartReview] data-shop-id が必要です');
+    return;
+  }
+
+  // 商品IDの自動検出
+  if (!productId || productId === 'PRODUCT_ID') {
+    productId = detectProductId();
+  }
+
+  if (!productId) {
+    console.warn('[BcartReview] 商品IDを検出できませんでした');
     return;
   }
 
@@ -34,59 +45,82 @@
   // 商品ID検出
   // ============================================
   function detectProductId() {
-    // 方法1: URLから取得 (/products/123 形式)
+    // URLから取得 (/products/123 または /product/123 形式)
     const urlMatch = window.location.pathname.match(/\/products?\/(\d+)/);
     if (urlMatch) return urlMatch[1];
 
-    // 方法2: URLパラメータから取得
+    // URLパラメータから取得
     const params = new URLSearchParams(window.location.search);
     if (params.get('product_id')) return params.get('product_id');
     if (params.get('id')) return params.get('id');
 
-    // 方法3: ページ内のdata属性から取得
+    // ページ内のdata属性から取得
     const productEl = document.querySelector('[data-product-id]');
-    if (productEl) return productEl.getAttribute('data-product-id');
-
-    // 方法4: meta tagから取得
-    const metaProduct = document.querySelector('meta[property="product:id"]');
-    if (metaProduct) return metaProduct.content;
+    if (productEl && productEl !== container) {
+      return productEl.getAttribute('data-product-id');
+    }
 
     return null;
   }
 
   // ============================================
-  // Supabase API呼び出し
+  // API
   // ============================================
   const api = {
-    async getReviews(productId) {
-      const url = `${CONFIG.supabaseUrl}/rest/v1/reviews?` +
-        `shop_id=eq.${CONFIG.shopId}&` +
+    shopId: null, // 内部UUID
+
+    async getShopId() {
+      if (this.shopId) return this.shopId;
+
+      const url = `${SUPABASE_URL}/rest/v1/shops?bcart_shop_id=eq.${bcartShopId}&select=id`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      const shops = await res.json();
+      if (shops && shops.length > 0) {
+        this.shopId = shops[0].id;
+      }
+      return this.shopId;
+    },
+
+    async getReviews() {
+      const shopId = await this.getShopId();
+      if (!shopId) return [];
+
+      const url = `${SUPABASE_URL}/rest/v1/reviews?` +
+        `shop_id=eq.${shopId}&` +
         `product_id=eq.${productId}&` +
         `status=eq.approved&` +
         `order=created_at.desc`;
 
       const res = await fetch(url, {
         headers: {
-          'apikey': CONFIG.supabaseKey,
-          'Authorization': `Bearer ${CONFIG.supabaseKey}`
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         }
       });
       return res.json();
     },
 
     async submitReview(data) {
-      const url = `${CONFIG.supabaseUrl}/rest/v1/reviews`;
+      const shopId = await this.getShopId();
+      if (!shopId) return false;
+
+      const url = `${SUPABASE_URL}/rest/v1/reviews`;
       const res = await fetch(url, {
         method: 'POST',
         headers: {
-          'apikey': CONFIG.supabaseKey,
-          'Authorization': `Bearer ${CONFIG.supabaseKey}`,
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
         body: JSON.stringify({
-          shop_id: CONFIG.shopId,
-          product_id: data.productId,
+          shop_id: shopId,
+          product_id: productId,
           rating: data.rating,
           comment: data.comment,
           author_name: data.authorName,
@@ -113,6 +147,8 @@
       margin-bottom: 16px;
       padding-bottom: 12px;
       border-bottom: 1px solid #e0e0e0;
+      flex-wrap: wrap;
+      gap: 12px;
     }
     .bcart-review-title {
       font-size: 18px;
@@ -147,6 +183,7 @@
       align-items: center;
       gap: 12px;
       margin-bottom: 8px;
+      flex-wrap: wrap;
     }
     .bcart-review-author {
       font-weight: 500;
@@ -257,10 +294,15 @@
       background: #ffebee;
       color: #c62828;
     }
+    .bcart-loading {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
   `;
 
   // ============================================
-  // UI生成
+  // ユーティリティ
   // ============================================
   function renderStars(rating) {
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
@@ -277,8 +319,22 @@
     return (sum / reviews.length).toFixed(1);
   }
 
-  function renderWidget(container, reviews, productId) {
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ============================================
+  // UI生成
+  // ============================================
+  function renderWidget(reviews) {
     const avg = calculateAverage(reviews);
+    const formId = 'bcart-form-' + Math.random().toString(36).substr(2, 9);
 
     container.innerHTML = `
       <div class="bcart-review-widget">
@@ -314,44 +370,44 @@
 
         <div class="bcart-review-form">
           <h4 class="bcart-review-form-title">レビューを書く</h4>
-          <form id="bcart-review-form">
+          <form id="${formId}">
             <div class="bcart-form-group">
               <label class="bcart-form-label">評価 *</label>
               <div class="bcart-star-rating">
-                <input type="radio" id="star5" name="rating" value="5" required>
-                <label for="star5">★</label>
-                <input type="radio" id="star4" name="rating" value="4">
-                <label for="star4">★</label>
-                <input type="radio" id="star3" name="rating" value="3">
-                <label for="star3">★</label>
-                <input type="radio" id="star2" name="rating" value="2">
-                <label for="star2">★</label>
-                <input type="radio" id="star1" name="rating" value="1">
-                <label for="star1">★</label>
+                <input type="radio" id="${formId}-star5" name="rating" value="5" required>
+                <label for="${formId}-star5">★</label>
+                <input type="radio" id="${formId}-star4" name="rating" value="4">
+                <label for="${formId}-star4">★</label>
+                <input type="radio" id="${formId}-star3" name="rating" value="3">
+                <label for="${formId}-star3">★</label>
+                <input type="radio" id="${formId}-star2" name="rating" value="2">
+                <label for="${formId}-star2">★</label>
+                <input type="radio" id="${formId}-star1" name="rating" value="1">
+                <label for="${formId}-star1">★</label>
               </div>
             </div>
             <div class="bcart-form-group">
-              <label class="bcart-form-label" for="bcart-author">お名前 *</label>
-              <input type="text" id="bcart-author" name="author" class="bcart-form-input" required maxlength="50" placeholder="ニックネームでもOK">
+              <label class="bcart-form-label" for="${formId}-author">お名前 *</label>
+              <input type="text" id="${formId}-author" name="author" class="bcart-form-input" required maxlength="50" placeholder="ニックネームでもOK">
             </div>
             <div class="bcart-form-group">
-              <label class="bcart-form-label" for="bcart-comment">コメント</label>
-              <textarea id="bcart-comment" name="comment" class="bcart-form-input bcart-form-textarea" maxlength="1000" placeholder="商品の感想をお聞かせください"></textarea>
+              <label class="bcart-form-label" for="${formId}-comment">コメント</label>
+              <textarea id="${formId}-comment" name="comment" class="bcart-form-input bcart-form-textarea" maxlength="1000" placeholder="商品の感想をお聞かせください"></textarea>
             </div>
             <button type="submit" class="bcart-form-submit">レビューを投稿する</button>
-            <div id="bcart-form-message"></div>
+            <div class="bcart-form-message-area"></div>
           </form>
         </div>
       </div>
     `;
 
-    // フォーム送信ハンドラ
-    const form = container.querySelector('#bcart-review-form');
+    // フォーム送信
+    const form = container.querySelector(`#${formId}`);
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const submitBtn = form.querySelector('.bcart-form-submit');
-      const messageEl = container.querySelector('#bcart-form-message');
+      const messageArea = form.querySelector('.bcart-form-message-area');
 
       const formData = new FormData(form);
       const rating = parseInt(formData.get('rating'), 10);
@@ -359,8 +415,7 @@
       const comment = formData.get('comment').trim();
 
       if (!rating || !authorName) {
-        messageEl.className = 'bcart-form-message error';
-        messageEl.textContent = '評価とお名前は必須です';
+        messageArea.innerHTML = '<div class="bcart-form-message error">評価とお名前は必須です</div>';
         return;
       }
 
@@ -368,38 +423,21 @@
       submitBtn.textContent = '送信中...';
 
       try {
-        const success = await api.submitReview({
-          productId,
-          rating,
-          authorName,
-          comment
-        });
+        const success = await api.submitReview({ rating, authorName, comment });
 
         if (success) {
-          messageEl.className = 'bcart-form-message success';
-          messageEl.textContent = 'レビューを投稿しました。承認後に表示されます。';
+          messageArea.innerHTML = '<div class="bcart-form-message success">レビューを投稿しました。承認後に表示されます。</div>';
           form.reset();
         } else {
           throw new Error('投稿に失敗しました');
         }
       } catch (err) {
-        messageEl.className = 'bcart-form-message error';
-        messageEl.textContent = 'エラーが発生しました。しばらくしてからお試しください。';
+        messageArea.innerHTML = '<div class="bcart-form-message error">エラーが発生しました。しばらくしてからお試しください。</div>';
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'レビューを投稿する';
       }
     });
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 
   // ============================================
@@ -411,32 +449,19 @@
     styleEl.textContent = styles;
     document.head.appendChild(styleEl);
 
-    // コンテナ取得
-    const container = document.getElementById(CONFIG.containerId);
-    if (!container) {
-      console.error(`[BcartReview] コンテナが見つかりません: #${CONFIG.containerId}`);
-      return;
-    }
+    // ローディング表示
+    container.innerHTML = '<div class="bcart-loading">読み込み中...</div>';
 
-    // 商品ID検出
-    const productId = detectProductId();
-    if (!productId) {
-      console.warn('[BcartReview] 商品IDを検出できませんでした');
-      container.innerHTML = '<div class="bcart-review-empty">レビューを表示できません</div>';
-      return;
-    }
-
-    // レビュー取得・表示
     try {
-      const reviews = await api.getReviews(productId);
-      renderWidget(container, reviews, productId);
+      const reviews = await api.getReviews();
+      renderWidget(reviews);
     } catch (err) {
-      console.error('[BcartReview] レビュー取得エラー:', err);
+      console.error('[BcartReview] エラー:', err);
       container.innerHTML = '<div class="bcart-review-empty">レビューの読み込みに失敗しました</div>';
     }
   }
 
-  // DOMContentLoaded後に初期化
+  // 実行
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B-CART レビュー管理</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f5f5f5;
+      min-height: 100vh;
+    }
+
+    /* Auth Container */
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .auth-box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .auth-box h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #333;
+      font-size: 24px;
+    }
+
+    .auth-box .logo {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #4a90d9;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .btn-primary {
+      background-color: #4a90d9;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #3a7bc8;
+    }
+
+    .btn-secondary {
+      background-color: #f0f0f0;
+      color: #333;
+      margin-top: 10px;
+    }
+
+    .btn-secondary:hover {
+      background-color: #e0e0e0;
+    }
+
+    .auth-switch {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+    }
+
+    .auth-switch a {
+      color: #4a90d9;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .error-message {
+      background-color: #fee;
+      color: #c00;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .success-message {
+      background-color: #efe;
+      color: #060;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    /* Dashboard */
+    .dashboard {
+      display: none;
+    }
+
+    .header {
+      background: white;
+      padding: 16px 24px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      color: #333;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .shop-name {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .btn-logout {
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-logout:hover {
+      background: #e0e0e0;
+    }
+
+    .main-content {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Shop Setup */
+    .shop-setup {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      max-width: 500px;
+      margin: 40px auto;
+    }
+
+    .shop-setup h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .stat-card.pending .value { color: #f5a623; }
+    .stat-card.approved .value { color: #4caf50; }
+    .stat-card.rejected .value { color: #f44336; }
+
+    /* Reviews Table */
+    .reviews-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    .reviews-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reviews-header h2 {
+      font-size: 18px;
+      color: #333;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-tab {
+      padding: 8px 16px;
+      border: none;
+      background: #f5f5f5;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .filter-tab.active {
+      background: #4a90d9;
+      color: white;
+    }
+
+    .filter-tab:hover:not(.active) {
+      background: #e8e8e8;
+    }
+
+    .reviews-list {
+      padding: 0;
+    }
+
+    .review-item {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .review-item:last-child {
+      border-bottom: none;
+    }
+
+    .review-content {
+      flex: 1;
+    }
+
+    .review-meta {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .review-author {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .review-rating {
+      color: #f5a623;
+    }
+
+    .review-product {
+      color: #999;
+    }
+
+    .review-text {
+      color: #444;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .review-date {
+      font-size: 12px;
+      color: #999;
+    }
+
+    .review-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-action {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .btn-approve {
+      background: #e8f5e9;
+      color: #4caf50;
+    }
+
+    .btn-approve:hover {
+      background: #c8e6c9;
+    }
+
+    .btn-reject {
+      background: #ffebee;
+      color: #f44336;
+    }
+
+    .btn-reject:hover {
+      background: #ffcdd2;
+    }
+
+    .btn-delete {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    .btn-delete:hover {
+      background: #e0e0e0;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-pending {
+      background: #fff3e0;
+      color: #f5a623;
+    }
+
+    .status-approved {
+      background: #e8f5e9;
+      color: #4caf50;
+    }
+
+    .status-rejected {
+      background: #ffebee;
+      color: #f44336;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state h3 {
+      margin-bottom: 8px;
+      color: #666;
+    }
+
+    /* Widget Code Section */
+    .widget-section {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      padding: 20px;
+      margin-top: 24px;
+    }
+
+    .widget-section h3 {
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .btn-copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-copy:hover {
+      background: #555;
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4a90d9;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .review-item {
+        flex-direction: column;
+      }
+
+      .review-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+      }
+
+      .filter-tabs {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Auth Section -->
+  <div id="auth-section" class="auth-container">
+    <div class="auth-box">
+      <div class="logo">B-CART</div>
+      <h1 id="auth-title">ログイン</h1>
+
+      <div id="error-message" class="error-message"></div>
+      <div id="success-message" class="success-message"></div>
+
+      <form id="auth-form">
+        <div class="form-group" id="shop-name-group" style="display: none;">
+          <label for="shop-name">ショップ名</label>
+          <input type="text" id="shop-name" placeholder="例: マイショップ">
+        </div>
+
+        <div class="form-group" id="bcart-id-group" style="display: none;">
+          <label for="bcart-shop-id">B-CART ショップID</label>
+          <input type="text" id="bcart-shop-id" placeholder="例: shop123">
+        </div>
+
+        <div class="form-group">
+          <label for="email">メールアドレス</label>
+          <input type="email" id="email" required placeholder="example@email.com">
+        </div>
+
+        <div class="form-group">
+          <label for="password">パスワード</label>
+          <input type="password" id="password" required placeholder="6文字以上">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="auth-submit">ログイン</button>
+      </form>
+
+      <div class="auth-switch">
+        <span id="auth-switch-text">アカウントをお持ちでない方は</span>
+        <a href="#" id="auth-switch-link">新規登録</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard-section" class="dashboard">
+    <header class="header">
+      <h1>B-CART レビュー管理</h1>
+      <div class="header-right">
+        <span class="shop-name" id="display-shop-name"></span>
+        <button class="btn-logout" onclick="logout()">ログアウト</button>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- Shop Setup (shown if no shop registered) -->
+      <div id="shop-setup" class="shop-setup" style="display: none;">
+        <h2>ショップ情報を登録</h2>
+        <form id="shop-setup-form">
+          <div class="form-group">
+            <label for="setup-shop-name">ショップ名</label>
+            <input type="text" id="setup-shop-name" required placeholder="例: マイショップ">
+          </div>
+          <div class="form-group">
+            <label for="setup-bcart-id">B-CART ショップID</label>
+            <input type="text" id="setup-bcart-id" required placeholder="例: shop123">
+          </div>
+          <button type="submit" class="btn btn-primary">登録する</button>
+        </form>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div id="dashboard-content" style="display: none;">
+        <!-- Stats -->
+        <div class="stats">
+          <div class="stat-card pending">
+            <h3>承認待ち</h3>
+            <div class="value" id="stat-pending">0</div>
+          </div>
+          <div class="stat-card approved">
+            <h3>承認済み</h3>
+            <div class="value" id="stat-approved">0</div>
+          </div>
+          <div class="stat-card rejected">
+            <h3>却下</h3>
+            <div class="value" id="stat-rejected">0</div>
+          </div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="reviews-section">
+          <div class="reviews-header">
+            <h2>レビュー一覧</h2>
+            <div class="filter-tabs">
+              <button class="filter-tab active" data-status="all">すべて</button>
+              <button class="filter-tab" data-status="pending">承認待ち</button>
+              <button class="filter-tab" data-status="approved">承認済み</button>
+              <button class="filter-tab" data-status="rejected">却下</button>
+            </div>
+          </div>
+          <div id="reviews-list" class="reviews-list">
+            <div class="loading">
+              <div class="spinner"></div>
+              読み込み中...
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget Code -->
+        <div class="widget-section">
+          <h3>ウィジェット埋め込みコード</h3>
+          <p style="color: #666; margin-bottom: 16px;">以下のコードをB-CARTの商品ページに追加してください。</p>
+          <div class="code-block">
+            <button class="btn-copy" onclick="copyWidgetCode()">コピー</button>
+            <code id="widget-code"></code>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Supabase configuration
+    const SUPABASE_URL = 'https://qxnxyjssgsnbsfqjrfrc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bnh5anNzZ3NuYnNmcWpyZnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTcxNTksImV4cCI6MjA4NTg5MzE1OX0.krm-1spjrDf42V9pM6OxhcjnAhecoFZNLltFmXf-FiY';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // State
+    let currentUser = null;
+    let currentShop = null;
+    let currentFilter = 'all';
+    let isSignUp = false;
+
+    // DOM Elements
+    const authSection = document.getElementById('auth-section');
+    const dashboardSection = document.getElementById('dashboard-section');
+    const authForm = document.getElementById('auth-form');
+    const authTitle = document.getElementById('auth-title');
+    const authSubmit = document.getElementById('auth-submit');
+    const authSwitchText = document.getElementById('auth-switch-text');
+    const authSwitchLink = document.getElementById('auth-switch-link');
+    const shopNameGroup = document.getElementById('shop-name-group');
+    const bcartIdGroup = document.getElementById('bcart-id-group');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        await loadDashboard();
+      }
+
+      // Auth state change listener
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          currentUser = session.user;
+          await loadDashboard();
+        } else if (event === 'SIGNED_OUT') {
+          currentUser = null;
+          currentShop = null;
+          showAuthSection();
+        }
+      });
+
+      // Filter tabs
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentFilter = tab.dataset.status;
+          loadReviews();
+        });
+      });
+    });
+
+    // Toggle auth mode
+    authSwitchLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      isSignUp = !isSignUp;
+      updateAuthUI();
+    });
+
+    function updateAuthUI() {
+      if (isSignUp) {
+        authTitle.textContent = '新規登録';
+        authSubmit.textContent = '登録する';
+        authSwitchText.textContent = 'すでにアカウントをお持ちの方は';
+        authSwitchLink.textContent = 'ログイン';
+        shopNameGroup.style.display = 'block';
+        bcartIdGroup.style.display = 'block';
+      } else {
+        authTitle.textContent = 'ログイン';
+        authSubmit.textContent = 'ログイン';
+        authSwitchText.textContent = 'アカウントをお持ちでない方は';
+        authSwitchLink.textContent = '新規登録';
+        shopNameGroup.style.display = 'none';
+        bcartIdGroup.style.display = 'none';
+      }
+      hideMessages();
+    }
+
+    // Auth form submit
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideMessages();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        if (isSignUp) {
+          const shopName = document.getElementById('shop-name').value;
+          const bcartShopId = document.getElementById('bcart-shop-id').value;
+
+          if (!shopName || !bcartShopId) {
+            showError('ショップ名とB-CART ショップIDを入力してください');
+            return;
+          }
+
+          // Sign up
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+          });
+
+          if (error) throw error;
+
+          // Create shop
+          if (data.user) {
+            const { error: shopError } = await supabase
+              .from('shops')
+              .insert({
+                user_id: data.user.id,
+                shop_name: shopName,
+                bcart_shop_id: bcartShopId
+              });
+
+            if (shopError) throw shopError;
+          }
+
+          showSuccess('登録が完了しました。メールを確認してください。');
+        } else {
+          // Sign in
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) throw error;
+        }
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    // Shop setup form
+    document.getElementById('shop-setup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const shopName = document.getElementById('setup-shop-name').value;
+      const bcartShopId = document.getElementById('setup-bcart-id').value;
+
+      try {
+        const { error } = await supabase
+          .from('shops')
+          .insert({
+            user_id: currentUser.id,
+            shop_name: shopName,
+            bcart_shop_id: bcartShopId
+          });
+
+        if (error) throw error;
+
+        await loadDashboard();
+      } catch (error) {
+        alert('エラー: ' + error.message);
+      }
+    });
+
+    // Load dashboard
+    async function loadDashboard() {
+      authSection.style.display = 'none';
+      dashboardSection.style.display = 'block';
+
+      // Load shop
+      const { data: shops, error } = await supabase
+        .from('shops')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .limit(1);
+
+      if (error) {
+        console.error('Error loading shop:', error);
+        return;
+      }
+
+      if (shops && shops.length > 0) {
+        currentShop = shops[0];
+        document.getElementById('display-shop-name').textContent = currentShop.shop_name;
+        document.getElementById('shop-setup').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+
+        // Set widget code
+        updateWidgetCode();
+
+        // Load reviews
+        await loadReviews();
+        await loadStats();
+      } else {
+        document.getElementById('shop-setup').style.display = 'block';
+        document.getElementById('dashboard-content').style.display = 'none';
+      }
+    }
+
+    // Load reviews
+    async function loadReviews() {
+      const reviewsList = document.getElementById('reviews-list');
+      reviewsList.innerHTML = '<div class="loading"><div class="spinner"></div>読み込み中...</div>';
+
+      let query = supabase
+        .from('reviews')
+        .select('*')
+        .eq('shop_id', currentShop.id)
+        .order('created_at', { ascending: false });
+
+      if (currentFilter !== 'all') {
+        query = query.eq('status', currentFilter);
+      }
+
+      const { data: reviews, error } = await query;
+
+      if (error) {
+        reviewsList.innerHTML = '<div class="empty-state"><h3>エラーが発生しました</h3></div>';
+        return;
+      }
+
+      if (!reviews || reviews.length === 0) {
+        reviewsList.innerHTML = '<div class="empty-state"><h3>レビューがありません</h3><p>まだレビューが投稿されていません</p></div>';
+        return;
+      }
+
+      reviewsList.innerHTML = reviews.map(review => `
+        <div class="review-item" data-id="${review.id}">
+          <div class="review-content">
+            <div class="review-meta">
+              <span class="review-author">${escapeHtml(review.author_name)}</span>
+              <span class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+              <span class="review-product">商品ID: ${escapeHtml(review.product_id)}</span>
+              <span class="status-badge status-${review.status}">${getStatusLabel(review.status)}</span>
+            </div>
+            <p class="review-text">${escapeHtml(review.comment || '(コメントなし)')}</p>
+            <span class="review-date">${formatDate(review.created_at)}</span>
+          </div>
+          <div class="review-actions">
+            ${review.status !== 'approved' ? `<button class="btn-action btn-approve" onclick="updateReviewStatus('${review.id}', 'approved')">承認</button>` : ''}
+            ${review.status !== 'rejected' ? `<button class="btn-action btn-reject" onclick="updateReviewStatus('${review.id}', 'rejected')">却下</button>` : ''}
+            <button class="btn-action btn-delete" onclick="deleteReview('${review.id}')">削除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Load stats
+    async function loadStats() {
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('status')
+        .eq('shop_id', currentShop.id);
+
+      if (reviews) {
+        const counts = { pending: 0, approved: 0, rejected: 0 };
+        reviews.forEach(r => counts[r.status]++);
+
+        document.getElementById('stat-pending').textContent = counts.pending;
+        document.getElementById('stat-approved').textContent = counts.approved;
+        document.getElementById('stat-rejected').textContent = counts.rejected;
+      }
+    }
+
+    // Update review status
+    async function updateReviewStatus(id, status) {
+      const { error } = await supabase
+        .from('reviews')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) {
+        alert('エラー: ' + error.message);
+        return;
+      }
+
+      await loadReviews();
+      await loadStats();
+    }
+
+    // Delete review
+    async function deleteReview(id) {
+      if (!confirm('このレビューを削除しますか？')) return;
+
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        alert('エラー: ' + error.message);
+        return;
+      }
+
+      await loadReviews();
+      await loadStats();
+    }
+
+    // Logout
+    async function logout() {
+      await supabase.auth.signOut();
+    }
+
+    // Show auth section
+    function showAuthSection() {
+      authSection.style.display = 'flex';
+      dashboardSection.style.display = 'none';
+    }
+
+    // Update widget code
+    function updateWidgetCode() {
+      const code = `<div id="bcart-reviews" data-shop-id="${currentShop.bcart_shop_id}" data-product-id="PRODUCT_ID"></div>
+<script src="${window.location.origin}/widget/bcart-review.js"><\/script>`;
+      document.getElementById('widget-code').textContent = code;
+    }
+
+    // Copy widget code
+    function copyWidgetCode() {
+      const code = document.getElementById('widget-code').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        alert('コードをコピーしました');
+      });
+    }
+
+    // Utility functions
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.style.display = 'block';
+    }
+
+    function hideMessages() {
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function getStatusLabel(status) {
+      const labels = { pending: '承認待ち', approved: '承認済み', rejected: '却下' };
+      return labels[status] || status;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  </script>
+</body>
+</html>
