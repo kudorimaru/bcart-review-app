@@ -60,6 +60,11 @@ CREATE POLICY "Users can update own shops"
   ON shops FOR UPDATE
   USING (auth.uid() = user_id);
 
+-- Public read policy for widget (allows lookup by bcart_shop_id)
+CREATE POLICY "Public can read shops for widget"
+  ON shops FOR SELECT
+  USING (true);
+
 -- Reviews policies (for shop owners)
 CREATE POLICY "Shop owners can view own reviews"
   ON reviews FOR SELECT

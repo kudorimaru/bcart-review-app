@@ -336,6 +336,8 @@
     const avg = calculateAverage(reviews);
     const formId = 'bcart-form-' + Math.random().toString(36).substr(2, 9);
 
+    console.log('[BcartReview] renderWidget called, formId:', formId, 'reviews:', reviews.length);
+
     container.innerHTML = `
       <div class="bcart-review-widget">
         <div class="bcart-review-header">
@@ -402,7 +404,15 @@
     `;
 
     // フォーム送信
+    console.log('[BcartReview] Looking for form:', formId);
+    console.log('[BcartReview] Container innerHTML length:', container.innerHTML.length);
     const form = container.querySelector(`#${formId}`);
+    console.log('[BcartReview] Form found:', !!form);
+    if (!form) {
+      console.error('[BcartReview] フォームが見つかりません:', formId);
+      console.log('[BcartReview] Container children:', container.children.length);
+      return;
+    }
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
