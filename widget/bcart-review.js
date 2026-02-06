@@ -372,57 +372,61 @@
 
         <div class="bcart-review-form">
           <h4 class="bcart-review-form-title">レビューを書く</h4>
-          <form id="${formId}">
+          <div id="${formId}" class="bcart-review-form-inner">
             <div class="bcart-form-group">
               <label class="bcart-form-label">評価 *</label>
               <div class="bcart-star-rating">
-                <input type="radio" id="${formId}-star5" name="rating" value="5" required>
+                <input type="radio" id="${formId}-star5" name="${formId}-rating" value="5">
                 <label for="${formId}-star5">★</label>
-                <input type="radio" id="${formId}-star4" name="rating" value="4">
+                <input type="radio" id="${formId}-star4" name="${formId}-rating" value="4">
                 <label for="${formId}-star4">★</label>
-                <input type="radio" id="${formId}-star3" name="rating" value="3">
+                <input type="radio" id="${formId}-star3" name="${formId}-rating" value="3">
                 <label for="${formId}-star3">★</label>
-                <input type="radio" id="${formId}-star2" name="rating" value="2">
+                <input type="radio" id="${formId}-star2" name="${formId}-rating" value="2">
                 <label for="${formId}-star2">★</label>
-                <input type="radio" id="${formId}-star1" name="rating" value="1">
+                <input type="radio" id="${formId}-star1" name="${formId}-rating" value="1">
                 <label for="${formId}-star1">★</label>
               </div>
             </div>
             <div class="bcart-form-group">
               <label class="bcart-form-label" for="${formId}-author">お名前 *</label>
-              <input type="text" id="${formId}-author" name="author" class="bcart-form-input" required maxlength="50" placeholder="ニックネームでもOK">
+              <input type="text" id="${formId}-author" class="bcart-form-input" maxlength="50" placeholder="ニックネームでもOK">
             </div>
             <div class="bcart-form-group">
               <label class="bcart-form-label" for="${formId}-comment">コメント</label>
-              <textarea id="${formId}-comment" name="comment" class="bcart-form-input bcart-form-textarea" maxlength="1000" placeholder="商品の感想をお聞かせください"></textarea>
+              <textarea id="${formId}-comment" class="bcart-form-input bcart-form-textarea" maxlength="1000" placeholder="商品の感想をお聞かせください"></textarea>
             </div>
-            <button type="submit" class="bcart-form-submit">レビューを投稿する</button>
+            <button type="button" class="bcart-form-submit">レビューを投稿する</button>
             <div class="bcart-form-message-area"></div>
-          </form>
+          </div>
         </div>
       </div>
     `;
 
-    // フォーム送信
-    console.log('[BcartReview] Looking for form:', formId);
-    console.log('[BcartReview] Container innerHTML length:', container.innerHTML.length);
-    const form = container.querySelector(`#${formId}`);
-    console.log('[BcartReview] Form found:', !!form);
-    if (!form) {
-      console.error('[BcartReview] フォームが見つかりません:', formId);
-      console.log('[BcartReview] Container children:', container.children.length);
+    // フォーム送信（divを使用、ネストされたformを避けるため）
+    console.log('[BcartReview] Looking for form container:', formId);
+    const formContainer = container.querySelector(`#${formId}`);
+    console.log('[BcartReview] Form container found:', !!formContainer);
+    if (!formContainer) {
+      console.error('[BcartReview] フォームコンテナが見つかりません:', formId);
       return;
     }
-    form.addEventListener('submit', async (e) => {
+
+    const submitBtn = formContainer.querySelector('.bcart-form-submit');
+    const messageArea = formContainer.querySelector('.bcart-form-message-area');
+
+    submitBtn.addEventListener('click', async (e) => {
       e.preventDefault();
+      e.stopPropagation();
 
-      const submitBtn = form.querySelector('.bcart-form-submit');
-      const messageArea = form.querySelector('.bcart-form-message-area');
+      // 手動で値を取得（FormDataの代わりに）
+      const ratingInput = formContainer.querySelector(`input[name="${formId}-rating"]:checked`);
+      const authorInput = formContainer.querySelector(`#${formId}-author`);
+      const commentInput = formContainer.querySelector(`#${formId}-comment`);
 
-      const formData = new FormData(form);
-      const rating = parseInt(formData.get('rating'), 10);
-      const authorName = formData.get('author').trim();
-      const comment = formData.get('comment').trim();
+      const rating = ratingInput ? parseInt(ratingInput.value, 10) : 0;
+      const authorName = authorInput ? authorInput.value.trim() : '';
+      const comment = commentInput ? commentInput.value.trim() : '';
 
       if (!rating || !authorName) {
         messageArea.innerHTML = '<div class="bcart-form-message error">評価とお名前は必須です</div>';
@@ -437,7 +441,10 @@
 
         if (success) {
           messageArea.innerHTML = '<div class="bcart-form-message success">レビューを投稿しました。承認後に表示されます。</div>';
-          form.reset();
+          // 手動でフォームをリセット
+          formContainer.querySelectorAll(`input[name="${formId}-rating"]`).forEach(r => r.checked = false);
+          if (authorInput) authorInput.value = '';
+          if (commentInput) commentInput.value = '';
         } else {
           throw new Error('投稿に失敗しました');
         }
