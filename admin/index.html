@@ -609,6 +609,13 @@
   </div>
 
   <script>
+  (function() {
+    'use strict';
+
+    // Prevent duplicate initialization
+    if (window._bcartAdminInitialized) return;
+    window._bcartAdminInitialized = true;
+
     // Supabase configuration
     const SUPABASE_URL = 'https://qxnxyjssgsnbsfqjrfrc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bnh5anNzZ3NuYnNmcWpyZnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTcxNTksImV4cCI6MjA4NTg5MzE1OX0.krm-1spjrDf42V9pM6OxhcjnAhecoFZNLltFmXf-FiY';
@@ -967,6 +974,13 @@
         minute: '2-digit'
       });
     }
+
+    // Expose functions to global scope for onclick handlers
+    window.logout = logout;
+    window.updateReviewStatus = updateReviewStatus;
+    window.deleteReview = deleteReview;
+    window.copyWidgetCode = copyWidgetCode;
+  })();
   </script>
 </body>
 </html>
