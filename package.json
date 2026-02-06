@@ -1,0 +1,13 @@
+{
+  "name": "bcart-review-app",
+  "version": "1.0.0",
+  "description": "B-CART用レビューウィジェット",
+  "scripts": {
+    "dev": "node local/server.js",
+    "start": "node local/server.js"
+  },
+  "keywords": ["bcart", "review", "widget"],
+  "author": "Craval Inc.",
+  "license": "UNLICENSED",
+  "private": true
+}
