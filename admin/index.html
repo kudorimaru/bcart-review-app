@@ -613,7 +613,7 @@
     const SUPABASE_URL = 'https://qxnxyjssgsnbsfqjrfrc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4bnh5anNzZ3NuYnNmcWpyZnJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMTcxNTksImV4cCI6MjA4NTg5MzE1OX0.krm-1spjrDf42V9pM6OxhcjnAhecoFZNLltFmXf-FiY';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = window._supabaseClient || (window._supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY));
 
     // State
     let currentUser = null;
