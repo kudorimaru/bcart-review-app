@@ -240,14 +240,119 @@
     .reviews-header {
       padding: 20px;
       border-bottom: 1px solid #eee;
+    }
+
+    .reviews-header-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      margin-bottom: 16px;
     }
 
     .reviews-header h2 {
       font-size: 18px;
       color: #333;
+    }
+
+    .reviews-toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      width: 200px;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: #4a90d9;
+    }
+
+    .btn-bulk {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .btn-bulk-approve {
+      background: #4caf50;
+      color: white;
+    }
+
+    .btn-bulk-approve:hover {
+      background: #43a047;
+    }
+
+    .btn-bulk-approve:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .auto-approve-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #4caf50;
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
     }
 
     .filter-tabs {
@@ -579,8 +684,27 @@
         <!-- Reviews -->
         <div class="reviews-section">
           <div class="reviews-header">
-            <h2>レビュー一覧</h2>
-            <div class="filter-tabs">
+            <div class="reviews-header-top">
+              <h2>レビュー一覧</h2>
+              <div class="auto-approve-toggle">
+                <span>自動承認</span>
+                <label class="toggle-switch">
+                  <input type="checkbox" id="auto-approve-toggle" onchange="toggleAutoApprove(this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <div class="reviews-toolbar">
+              <div class="search-box">
+                <input type="text" class="search-input" id="search-input" placeholder="商品ID・投稿者名で検索">
+                <button class="filter-tab" onclick="applySearch()">検索</button>
+                <button class="filter-tab" onclick="clearSearch()">クリア</button>
+              </div>
+              <button class="btn-bulk btn-bulk-approve" id="btn-bulk-approve" onclick="bulkApprove()">
+                承認待ちを一括承認
+              </button>
+            </div>
+            <div class="filter-tabs" style="margin-top: 12px;">
               <button class="filter-tab active" data-status="all">すべて</button>
               <button class="filter-tab" data-status="pending">承認待ち</button>
               <button class="filter-tab" data-status="approved">承認済み</button>
@@ -626,7 +750,9 @@
     let currentUser = null;
     let currentShop = null;
     let currentFilter = 'all';
+    let currentSearch = '';
     let isSignUp = false;
+    let autoApproveEnabled = false;
 
     // DOM Elements
     const authSection = document.getElementById('auth-section');
@@ -803,6 +929,9 @@
         // Set widget code
         updateWidgetCode();
 
+        // Load auto-approve setting
+        loadAutoApproveSetting();
+
         // Load reviews
         await loadReviews();
         await loadStats();
@@ -834,12 +963,32 @@
         return;
       }
 
-      if (!reviews || reviews.length === 0) {
-        reviewsList.innerHTML = '<div class="empty-state"><h3>レビューがありません</h3><p>まだレビューが投稿されていません</p></div>';
+      // Apply search filter
+      let filteredReviews = reviews || [];
+      if (currentSearch) {
+        const searchLower = currentSearch.toLowerCase();
+        filteredReviews = filteredReviews.filter(r =>
+          r.product_id.toLowerCase().includes(searchLower) ||
+          r.author_name.toLowerCase().includes(searchLower) ||
+          (r.comment && r.comment.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Update bulk approve button
+      const pendingCount = (reviews || []).filter(r => r.status === 'pending').length;
+      const bulkBtn = document.getElementById('btn-bulk-approve');
+      if (bulkBtn) {
+        bulkBtn.disabled = pendingCount === 0;
+        bulkBtn.textContent = pendingCount > 0 ? `承認待ち${pendingCount}件を一括承認` : '承認待ちなし';
+      }
+
+      if (!filteredReviews || filteredReviews.length === 0) {
+        const msg = currentSearch ? '検索結果がありません' : 'レビューがありません';
+        reviewsList.innerHTML = `<div class="empty-state"><h3>${msg}</h3><p>${currentSearch ? '検索条件を変更してください' : 'まだレビューが投稿されていません'}</p></div>`;
         return;
       }
 
-      reviewsList.innerHTML = reviews.map(review => `
+      reviewsList.innerHTML = filteredReviews.map(review => `
         <div class="review-item" data-id="${review.id}">
           <div class="review-content">
             <div class="review-meta">
@@ -858,6 +1007,69 @@
           </div>
         </div>
       `).join('');
+    }
+
+    // Search functions
+    function applySearch() {
+      currentSearch = document.getElementById('search-input').value.trim();
+      loadReviews();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      currentSearch = '';
+      loadReviews();
+    }
+
+    // Bulk approve all pending reviews
+    async function bulkApprove() {
+      if (!confirm('承認待ちのレビューをすべて承認しますか？')) return;
+
+      const { error } = await supabase
+        .from('reviews')
+        .update({ status: 'approved' })
+        .eq('shop_id', currentShop.id)
+        .eq('status', 'pending');
+
+      if (error) {
+        alert('エラー: ' + error.message);
+        return;
+      }
+
+      await loadReviews();
+      await loadStats();
+    }
+
+    // Toggle auto-approve
+    async function toggleAutoApprove(enabled) {
+      autoApproveEnabled = enabled;
+
+      // Save to localStorage for persistence
+      localStorage.setItem(`autoApprove_${currentShop.id}`, enabled);
+
+      if (enabled) {
+        // Auto-approve all existing pending reviews
+        const { error } = await supabase
+          .from('reviews')
+          .update({ status: 'approved' })
+          .eq('shop_id', currentShop.id)
+          .eq('status', 'pending');
+
+        if (!error) {
+          await loadReviews();
+          await loadStats();
+        }
+      }
+    }
+
+    // Load auto-approve setting
+    function loadAutoApproveSetting() {
+      if (currentShop) {
+        const saved = localStorage.getItem(`autoApprove_${currentShop.id}`);
+        autoApproveEnabled = saved === 'true';
+        const toggle = document.getElementById('auto-approve-toggle');
+        if (toggle) toggle.checked = autoApproveEnabled;
+      }
     }
 
     // Load stats
@@ -980,6 +1192,10 @@
     window.updateReviewStatus = updateReviewStatus;
     window.deleteReview = deleteReview;
     window.copyWidgetCode = copyWidgetCode;
+    window.applySearch = applySearch;
+    window.clearSearch = clearSearch;
+    window.bulkApprove = bulkApprove;
+    window.toggleAutoApprove = toggleAutoApprove;
   })();
   </script>
 </body>

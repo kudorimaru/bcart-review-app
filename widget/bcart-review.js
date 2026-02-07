@@ -138,31 +138,33 @@
     .bcart-review-widget {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       max-width: 100%;
-      margin: 20px 0;
+      margin: 10px 0;
+      font-size: 13px;
     }
     .bcart-review-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
       border-bottom: 1px solid #e0e0e0;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 6px;
     }
     .bcart-review-title {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
       margin: 0;
     }
     .bcart-review-summary {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
       color: #666;
+      font-size: 12px;
     }
     .bcart-review-avg {
-      font-size: 24px;
+      font-size: 16px;
       font-weight: bold;
       color: #f5a623;
     }
@@ -172,7 +174,7 @@
       margin: 0;
     }
     .bcart-review-item {
-      padding: 16px 0;
+      padding: 8px 0;
       border-bottom: 1px solid #f0f0f0;
     }
     .bcart-review-item:last-child {
@@ -181,57 +183,61 @@
     .bcart-review-meta {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 8px;
+      gap: 6px;
+      margin-bottom: 4px;
       flex-wrap: wrap;
+      font-size: 12px;
     }
     .bcart-review-author {
       font-weight: 500;
     }
     .bcart-review-date {
       color: #999;
-      font-size: 12px;
+      font-size: 10px;
     }
     .bcart-review-stars {
       color: #f5a623;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
+      font-size: 12px;
     }
     .bcart-review-comment {
       color: #333;
-      line-height: 1.6;
+      line-height: 1.4;
       margin: 0;
+      font-size: 12px;
     }
     .bcart-review-empty {
       text-align: center;
-      padding: 40px;
+      padding: 15px;
       color: #999;
+      font-size: 12px;
     }
     .bcart-review-form {
       background: #f9f9f9;
-      padding: 20px;
-      border-radius: 8px;
-      margin-top: 20px;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 10px;
     }
     .bcart-review-form-title {
-      font-size: 16px;
+      font-size: 13px;
       font-weight: bold;
-      margin: 0 0 16px 0;
+      margin: 0 0 10px 0;
     }
     .bcart-form-group {
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
     .bcart-form-label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 3px;
       font-weight: 500;
-      font-size: 14px;
+      font-size: 12px;
     }
     .bcart-form-input {
       width: 100%;
-      padding: 10px 12px;
+      padding: 6px 8px;
       border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
+      border-radius: 3px;
+      font-size: 12px;
       box-sizing: border-box;
     }
     .bcart-form-input:focus {
@@ -239,12 +245,12 @@
       border-color: #f5a623;
     }
     .bcart-form-textarea {
-      min-height: 100px;
+      min-height: 60px;
       resize: vertical;
     }
     .bcart-star-rating {
       display: flex;
-      gap: 4px;
+      gap: 2px;
       flex-direction: row-reverse;
       justify-content: flex-end;
     }
@@ -253,7 +259,7 @@
     }
     .bcart-star-rating label {
       cursor: pointer;
-      font-size: 28px;
+      font-size: 18px;
       color: #ddd;
       transition: color 0.2s;
     }
@@ -266,9 +272,9 @@
       background: #f5a623;
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: 4px;
-      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 3px;
+      font-size: 12px;
       font-weight: bold;
       cursor: pointer;
       transition: background 0.2s;
@@ -281,10 +287,11 @@
       cursor: not-allowed;
     }
     .bcart-form-message {
-      padding: 12px;
-      border-radius: 4px;
-      margin-top: 12px;
+      padding: 8px;
+      border-radius: 3px;
+      margin-top: 8px;
       text-align: center;
+      font-size: 12px;
     }
     .bcart-form-message.success {
       background: #e8f5e9;
@@ -296,8 +303,9 @@
     }
     .bcart-loading {
       text-align: center;
-      padding: 40px;
+      padding: 15px;
       color: #999;
+      font-size: 12px;
     }
   `;
 
